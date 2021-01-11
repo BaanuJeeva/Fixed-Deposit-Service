@@ -1,0 +1,98 @@
+service:
+  name: Fixed-deposit-service-main
+
+plugins:
+  - serverless-bundle
+  - serverless-pseudo-parameters
+
+custom:
+  authorizer: arn:aws:lambda:us-east-1:543458641658:function:auth-service-dev-auth
+  FixedDepositsTable:
+    name: !Ref FixedDepositsTable
+    arn: !GetAtt FixedDepositsTable.Arn  
+  bundle:
+    linting: false
+
+provider:
+  name: aws
+  runtime: nodejs12.x
+  memorySize: 256
+  stage: ${opt:stage, 'dev'}
+  region: us-east-1
+  environment:
+    FIXED_DEPOSITS_TABLE_NAME: ${self:custom.FixedDepositsTable.name}
+  iamRoleStatements:
+    - ${file(iam/FixedDepositsTableIAM.yml):FixedDepositsTableIAM}
+
+resources:
+  Resources:
+    FixedDepositsTable: ${file(resources/FixedDepositsTable.yml):FixedDepositsTable}
+  
+functions:
+  createFixedDeposit:
+    handler: src/handlers/createFixedDeposit.handler
+    events:
+      - http:
+          method: POST
+          path: /fixed_deposit
+          cors: true
+          authorizer: ${self:custom.authorizer}
+
+  getFixedDeposits:
+    handler: src/handlers/getFixedDeposits.handler
+    events:
+      - http:
+          method: GET
+          path: /fixed_deposits
+          cors: true
+          authorizer: ${self:custom.authorizer}
+
+
+  getFixedDeposit:
+    handler: src/handlers/getFixedDeposit.handler
+    events:
+      - http:
+          method: GET
+          path: /fixed_deposit/{id} 
+          cors: true
+          authorizer: ${self:custom.authorizer}
+
+
+  #bid is property of update_serving_account, patching the bid of an update_serving_account with a specific id        
+  placeTaxRate:
+    handler: src/handlers/placeTaxRate.handler
+    events:
+      - http:
+          method: PATCH
+          path: update_fixed_deposit/{id}/tax_rate
+          cors: true
+          authorizer: ${self:custom.authorizer}
+
+
+  deleteFixedDeposit:
+    handler: src/handlers/deleteFixedDeposit.handler
+    events:
+      - http:
+          method: DELETE
+          path: /delete_fixed_deposit/{id}  
+          cors: true
+          authorizer: ${self:custom.authorizer}    
+
+  getFixedDepositFromAccount:
+    handler: src/handlers/getFixedDepositFromAccount.handler
+    events:
+      - http:
+          method: GET
+          path: /account
+          cors: true
+          authorizer: ${self:custom.authorizer}
+
+
+#  calculateResults:
+#    handler: src/handlers/calculateResults.handler
+#    events:
+#      - http:
+#          method: GET
+#          path: /cal_results
+#          cors: true
+#          authorizer: ${self:custom.authorizer}   
